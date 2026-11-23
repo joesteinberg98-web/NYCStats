@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NYC Stop-and-Frisk 2022: Data Analysis</title>
+<meta name="description" content="An analysis of the NYPD's 2022 Stop, Question and Frisk data: who was stopped, when, where, why, and with what outcome.">
+<!-- Class project: add your name / course / date in the byline below. -->
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f6f5f2; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#8b8a85; --line:#e3e1db; --track:#eceae4;
+  --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100; --c5:#e87ba4; --c6:#6250d6; --neutral:#b9b7ae;
+  --accent:#184f95; --warn-bg:#fff4e0; --warn-line:#e8b660;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#121211; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#8f8e86; --line:#33322f; --track:#2a2a28;
+    --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#9085e9; --neutral:#6b6a64;
+    --accent:#86b6ef; --warn-bg:#2b2416; --warn-line:#7a5f26;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#121211; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#8f8e86; --line:#33322f; --track:#2a2a28;
+  --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#9085e9; --neutral:#6b6a64;
+  --accent:#86b6ef; --warn-bg:#2b2416; --warn-line:#7a5f26;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+header.hero{padding:56px 0 28px}
+.kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);font-weight:600}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.1;margin:10px 0 14px;letter-spacing:-.02em}
+.lede{font-size:18px;color:var(--ink2);max-width:760px;margin:0}
+.byline{margin-top:14px;font-size:14px;color:var(--muted)}
+nav.toc{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav.toc .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:8px;padding-bottom:8px;scrollbar-width:thin}
+nav.toc a{white-space:nowrap;text-decoration:none;color:var(--ink2);font-size:13px;padding:5px 10px;border-radius:999px}
+nav.toc a:hover{background:var(--track);color:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:26px 0 6px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.tile b{display:block;font-size:32px;line-height:1.1;letter-spacing:-.02em}
+.tile span{font-size:13px;color:var(--ink2)}
+section.q{padding:44px 0 8px;border-top:1px solid var(--line);margin-top:36px}
+section.q .num{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+h2{font-size:clamp(24px,3.4vw,32px);line-height:1.2;margin:4px 0 10px;letter-spacing:-.015em}
+h3{font-size:17px;margin:0 0 4px}
+.ask{color:var(--ink2);font-size:15px;margin:0 0 16px;font-style:italic;max-width:820px}
+.answer{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--c1);border-radius:10px;padding:14px 18px;margin:0 0 18px}
+.answer p{margin:0 0 8px}.answer p:last-child{margin:0}
+.answer ul{margin:6px 0 0;padding-left:20px}
+.answer li{margin:3px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px 14px;margin:0 0 16px;min-width:0}
+.card .sub{font-size:13px;color:var(--ink2);margin:0 0 12px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--ink2);margin:0 0 10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.note{font-size:13px;color:var(--ink2);margin:8px 0 0}
+.caveat{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:10px;padding:12px 16px;font-size:14px;margin:0 0 16px}
+.caveat b{display:block;margin-bottom:2px}
+/* horizontal bars */
+.hb{display:grid;grid-template-columns:minmax(90px,210px) 1fr 62px;align-items:center;gap:10px;padding:3px 0;font-size:14px}
+.hb .hl{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb .hl small{color:var(--muted);margin-left:4px}
+.ht{height:14px;background:var(--track);border-radius:4px;overflow:hidden}
+.hf{height:100%;border-radius:0 4px 4px 0}
+.hv{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.hb.pair{grid-template-columns:minmax(90px,150px) 1fr 100px}
+.pairbars{display:flex;flex-direction:column;gap:3px}
+.pairbars .ht{height:10px;background:transparent}
+.hv2{font-size:12px;line-height:1.35}
+.hv2 span{display:block}
+/* columns */
+.cols{display:flex;align-items:flex-end;gap:3px;height:200px;padding-top:18px;border-bottom:1px solid var(--line)}
+.cols .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0;position:relative}
+.cols .bar{width:100%;max-width:46px;border-radius:4px 4px 0 0;background:var(--c1);min-height:1px}
+.cols .v{font-size:11px;color:var(--ink2);margin-bottom:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.clabels{display:flex;gap:3px;margin-top:4px}
+.clabels span{flex:1;text-align:center;font-size:11px;color:var(--ink2);min-width:0;overflow:hidden}
+.cols.tight{gap:1px}.clabels.tight{gap:1px}
+/* stacked */
+.sr{display:grid;grid-template-columns:150px 1fr 190px;align-items:center;gap:10px;padding:4px 0;font-size:14px}
+.sr .sl small{display:block;color:var(--muted);font-size:12px;line-height:1.2}
+.sb{display:flex;gap:2px;height:20px}
+.sb div{height:100%;min-width:2px}
+.sb div:first-child{border-radius:4px 0 0 4px}.sb div:last-child{border-radius:0 4px 4px 0}
+.sn{display:flex;gap:6px;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.sn span{flex:1;text-align:right}
+.sn.head span{color:var(--muted);font-weight:600}
+@media(max-width:720px){.sr{grid-template-columns:1fr}.sn{justify-content:flex-start}.sn span{flex:none;text-align:left;margin-right:10px}.sn.head{display:none}}
+/* heat */
+.heat{display:grid;grid-template-columns:34px repeat(24,1fr);gap:2px;font-size:11px;color:var(--ink2)}
+.heat .cell{aspect-ratio:1.25;border-radius:3px;min-width:0}
+.heat .rl{display:flex;align-items:center}
+.heat .hl2{text-align:center;overflow:visible;white-space:nowrap}
+.heatwrap{overflow-x:auto}
+.heatwrap .heat{min-width:560px}
+/* tables */
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:12px;color:var(--ink2);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+tbody tr:hover{background:var(--track)}
+details{margin-top:8px;font-size:14px}
+summary{cursor:pointer;color:var(--accent)}
+/* line */
+svg.line{width:100%;height:auto;display:block;overflow:visible}
+svg.line text{fill:var(--ink2);font-size:11px;font-family:inherit}
+svg.line .grid{stroke:var(--line);stroke-width:1}
+svg.line .axis{stroke:var(--muted);stroke-width:1}
+svg.line .hit{fill:transparent}
+svg.line .hit:hover{fill:color-mix(in srgb,var(--ink) 6%,transparent)}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;line-height:1.4;padding:6px 9px;border-radius:6px;max-width:260px;opacity:0;transition:opacity .08s;white-space:pre-line}
+footer{padding:40px 0 70px;color:var(--ink2);font-size:14px;border-top:1px solid var(--line);margin-top:48px}
+footer h3{margin-top:18px}
+.theme{position:fixed;right:12px;bottom:12px;z-index:30;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 12px;font-size:13px;cursor:pointer}
+@media print{nav.toc,.theme{display:none}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Data analysis · NYPD Stop, Question &amp; Frisk</div>
+  <h1>Stop-and-Frisk in New York City, 2022</h1>
+  <p class="lede">An analysis of all 15,102 police stops recorded by the NYPD in 2022: who was stopped, when and where, why, and what happened next, with a look back at how 2022 compares to earlier years.</p>
+  <p class="byline">Prepared by [Your Name] · [Course / Section] · [Date]</p>
+  <div class="tiles" id="tiles"></div>
+</div></header>
+
+<nav class="toc"><div class="wrap" id="toc"></div></nav>
+
+<main class="wrap">
+
+<section class="q" id="s1">
+  <div class="num">Question 1</div><h2>Demographic analysis</h2>
+  <p class="ask">What is the racial and gender distribution of individuals who were stopped and frisked? Are there disparities by race or gender?</p>
+  <div class="answer">
+    <p><b>Black New Yorkers made up 58.7% of stops (8,863) while being 20.2% of the city's population.</b> Hispanic people were 29.6% of stops (28.3% of residents), White people 7.1% (30.9% of residents) and Asian / Pacific Islander people 2.1% (15.6% of residents).</p>
+    <ul>
+      <li>Per 100,000 residents, Black New Yorkers were stopped about <b>499</b> times, Hispanic about <b>180</b>, White about <b>40</b> and Asian about <b>23</b>. That makes the Black stop rate roughly <b>12.6×</b> the White rate and the Hispanic rate roughly <b>4.5×</b>.</li>
+      <li>Men were <b>91.6%</b> of stops (13,829) and women <b>7.5%</b> (1,139). Black men alone were 54.5% of all stops.</li>
+      <li>Disparities in who gets stopped are large by race and extreme by gender (women are roughly half the city's residents but 7.5% of stops).</li>
+    </ul>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Share of stops vs. share of NYC population</h3><p class="sub">Percent. Population from the 2020 Census (non-Hispanic races; Hispanic of any race).</p>
+      <div class="legend"><span><i style="background:var(--c1)"></i>Share of stops</span><span><i style="background:var(--neutral)"></i>Share of NYC residents</span></div>
+      <div id="c1race"></div>
+      <p class="note">“Hispanic” combines the file's White Hispanic (3,036) and Black Hispanic (1,441) categories. “Other / unknown” stops combine Middle Eastern/SW Asian, American Indian/Alaska Native and missing race; the Census “Other” group is a different mix (multiracial and other races).</p></div>
+    <div class="card"><h3>Stops per 100,000 residents, by race</h3><p class="sub">2022 stops ÷ 2020 Census population of the group × 100,000.</p>
+      <div id="c1rate"></div>
+      <h3 style="margin-top:18px">Gender</h3>
+      <div id="c1sex"></div></div>
+  </div>
+  <div class="card"><h3>Race by gender</h3><p class="sub">Number of stops.</p><div class="tw" id="t1"></div></div>
+</section>
+
+<section class="q" id="s2">
+  <div class="num">Question 2</div><h2>Temporal trends</h2>
+  <p class="ask">How did the number of stops change over the months of 2022? Are there specific days of the week or times of day when stops are more common?</p>
+  <div class="answer">
+    <ul>
+      <li><b>Months:</b> stops climbed from about 1,150 in January–February to a spring peak in <b>May (1,471)</b>, with March–May accounting for 28.9% of the year. Volume then drifted down through the summer and fall and hit the year's low in <b>December (841)</b>, about 33% below the monthly average of 1,259.</li>
+      <li><b>Days:</b> <b>Wednesday (2,537)</b> was the busiest day and <b>Monday (1,561)</b> the quietest, so Wednesdays had about 63% more stops. Saturday and Thursday were also high. Adjusting for how many of each weekday there were in 2022 (Saturdays occurred 53 times) doesn't change the picture.</li>
+      <li><b>Time of day:</b> stops are strongly concentrated at night. <b>42%</b> happened between 6 pm and midnight and another 17% between midnight and 3 am. The peak hour was <b>10–11 pm (1,207)</b>; the quietest was 6–7 am (132).</li>
+    </ul>
+  </div>
+  <div class="card"><h3>Stops by month</h3><div id="c2m"></div></div>
+  <div class="grid2">
+    <div class="card"><h3>Average stops per day, by weekday</h3><p class="sub">Total stops ÷ number of that weekday in 2022.</p><div id="c2d"></div></div>
+    <div class="card"><h3>Stops by hour of day</h3><p class="sub">Hour the stop began (24-hour clock).</p><div id="c2h"></div>
+      <p class="note">The 12–1 am bucket includes 124 stops logged at exactly 00:00:00, which may be a default “unknown time” value, so midnight is likely slightly overstated.</p></div>
+  </div>
+  <div class="card"><h3>When it happens: weekday × hour</h3><p class="sub">Darker = more stops. Hover a cell for the count.</p><div class="heatwrap"><div class="heat" id="c2heat"></div></div></div>
+</section>
+
+<section class="q" id="s3">
+  <div class="num">Question 3</div><h2>Reasons for stops</h2>
+  <p class="ask">What are the most common reasons cited by officers? Is there a relationship between the stated reason and the outcome?</p>
+  <div class="answer">
+    <ul>
+      <li>The suspected crime officers cite is overwhelmingly <b>criminal possession of a weapon (CPW): 6,908 stops, 45.7%</b>. Next are robbery (10.2%), petit larceny (8.8%), assault (8.4%) and burglary (7.1%).</li>
+      <li>Yes, the reason strongly predicts the outcome. <b>Petit-larceny stops end in arrest 61% of the time</b>, grand larceny 51% and robbery 46%, but <b>CPW stops end in arrest only 21% of the time</b> and in no arrest or summons 76% of the time.</li>
+      <li>Weapon stops are the ones most likely to involve a frisk (87%) and the most likely to turn up a weapon (24%), while property-crime stops are searched more but rarely find weapons (petit larceny: 3.9%).</li>
+      <li>Who started the stop matters too. <b>Self-initiated stops</b> (35% of stops) end in arrest just 23% of the time versus 39% for stops from a radio run.</li>
+    </ul>
+  </div>
+  <div class="card"><h3>Suspected crime cited, with outcome of each type of stop</h3>
+    <div class="legend"><span><i style="background:var(--c1)"></i>Arrest</span><span><i style="background:var(--c2)"></i>Summons</span><span><i style="background:var(--neutral)"></i>Neither</span></div>
+    <div id="c3crime"></div>
+    <p class="note">Crime categories with fewer than 100 stops (14 categories, 515 stops in total) are omitted. Arrest and summons can both occur in a small number of stops (53), so the three segments add to slightly over 100%. Number to the right of the label is the number of stops.</p></div>
+  <div class="grid2">
+    <div class="card"><h3>What triggered the stop?</h3><p class="sub">How the stop was initiated.</p><div class="legend"><span><i style="background:var(--c1)"></i>Arrest</span><span><i style="background:var(--c2)"></i>Summons</span><span><i style="background:var(--neutral)"></i>Neither</span></div><div id="c3init"></div></div>
+    <div class="card"><h3>Circumstances officers checked off</h3><p class="sub">Share of stops where the box was ticked (more than one can apply).</p><div id="c3act"></div></div>
+  </div>
+</section>
+
+<section class="q" id="s4">
+  <div class="num">Question 4</div><h2>Outcomes of stops</h2>
+  <p class="ask">What percentage of stops result in arrests, summonses, or other outcomes? Are there differences by demographics?</p>
+  <div class="answer">
+    <ul>
+      <li><b>33.0% of stops ended in an arrest</b> (4,985) and <b>2.8% in a summons</b> (420). <b>64.6% (9,750 stops) ended with neither</b>, meaning most people stopped were let go without being charged.</li>
+      <li>Other outcomes: 60.0% of people were frisked and 42.2% were searched.</li>
+      <li><b>By race the arrest rate is nearly flat</b> (Black 32.9%, Hispanic 32.5%, Asian/PI 35.3%), with White people somewhat higher at 37.7%. But the <b>frisk rate differs a lot</b>: 63.5% of Black and 60.6% of Hispanic people were frisked versus 33.2% of White people.</li>
+      <li>Women were arrested more often than men (36.4% vs 32.9%) but frisked far less (35.5% vs 61.9%).</li>
+      <li>Outcomes differ more by <b>borough</b> than by race: 72.6% of Bronx stops ended with no arrest or summons vs 58% in Manhattan.</li>
+    </ul>
+  </div>
+  <div class="card"><h3>Outcome by demographic group and borough</h3>
+    <div class="legend"><span><i style="background:var(--c1)"></i>Arrest</span><span><i style="background:var(--c2)"></i>Summons</span><span><i style="background:var(--neutral)"></i>Neither</span></div>
+    <div id="c4out"></div></div>
+  <div class="card"><h3>Frisk and search rates</h3><p class="sub">Percent of stops in which the person was frisked or searched.</p><div class="tw" id="t4"></div></div>
+</section>
+
+<section class="q" id="s5">
+  <div class="num">Question 5</div><h2>Location analysis</h2>
+  <p class="ask">Which neighborhoods or precincts have the most stops? Is there a correlation between where stops happen and the demographics of the population?</p>
+  <div class="answer">
+    <ul>
+      <li>The <b>Bronx (4,495) and Brooklyn (4,465)</b> together account for 59% of stops. Relative to population the Bronx is far ahead at <b>305 stops per 100,000 residents</b>, versus 198 in Manhattan, 163 in Brooklyn, 98 in Queens and 89 on Staten Island.</li>
+      <li>The single busiest precinct is the <b>46th (University Heights / Morris Heights, Bronx) with 1,143 stops, 7.6% of the whole city's total</b>, more than twice the next-highest (75th, East New York, 502). The top 10 precincts account for 31.7% of stops, and 7 of the top 10 are in the Bronx.</li>
+      <li><b>Correlation with demographics:</b> at the borough level, the share of residents who are Black or Hispanic is strongly correlated with the stop rate (<b>r = 0.85</b>, n = 5). Across precincts, the places with more stops tend to be those where a larger share of the people stopped were Black or Hispanic (r = 0.39) and a smaller share were White (r = −0.38). Because the stop file contains no precinct population data these precinct figures describe the people stopped, not the residents.</li>
+    </ul>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Top 12 precincts by number of stops</h3><p class="sub">Neighborhood names are approximate.</p><div id="c5prec"></div></div>
+    <div class="card"><h3>Stops per 100,000 residents, by borough</h3><p class="sub">2022 stops ÷ 2020 Census borough population.</p><div id="c5rate"></div>
+      <p class="note">Borough rates use residents as the denominator. They don't count commuters, tourists or visitors, which inflates the rate in areas such as Midtown Manhattan.</p></div>
+  </div>
+  <div class="card"><h3>Borough comparison</h3><div class="tw" id="t5b"></div>
+    <p class="note">r (Pearson) between % Black + Hispanic residents and stops per 100,000 across the five boroughs = 0.85. With only 5 data points this is a descriptive pattern, not a statistical test.</p></div>
+  <div class="card"><h3>Who was stopped in the busiest precincts</h3><p class="sub">Race breakdown of people stopped (percent).</p><div class="tw" id="t5p"></div></div>
+</section>
+
+<section class="q" id="s6">
+  <div class="num">Question 6</div><h2>Weapon and contraband discovery</h2>
+  <p class="ask">How frequently do officers find weapons or contraband? Is there a connection between discovery and the reason for the stop?</p>
+  <div class="answer">
+    <ul>
+      <li>A <b>weapon was found in 16.0% of stops</b> (2,411) and <b>other contraband in 5.8%</b> (875). Combined, <b>20.0% of stops (3,020) turned up a weapon or contraband</b>, so in four of five stops nothing was found.</li>
+      <li>Among people who were frisked or searched (11,315), 25.4% had a weapon or contraband. Frisks alone found a weapon 21.0% of the time and searches 30.6%.</li>
+      <li><b>Yes, discovery is tied to the reason:</b> weapon-related stops yield weapons far more often (CPW 24.4%, menacing 25.4%, robbery 15.6%) than property-crime stops (burglary 4.5%, petit larceny 3.9%). Contraband runs the other way, found most in petit larceny (11.8%) and burglary (8.4%) stops.</li>
+      <li>Weapon discovery is highest when officers cite <b>actions suggesting a concealed weapon (30.8%)</b>, compared with about 12% when the stop was based on matching a description or being near a crime scene.</li>
+    </ul>
+  </div>
+  <div class="tiles">
+    <div class="tile"><b id="w1"></b><span>stops with a weapon found</span></div>
+    <div class="tile"><b id="w2"></b><span>stops with other contraband found</span></div>
+    <div class="tile"><b id="w3"></b><span>firearms recorded (1,187 stops)</span></div>
+    <div class="tile"><b id="w4"></b><span>knife / cutting instrument (1,083 stops)</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Weapon found, by suspected crime</h3><p class="sub">Percent of stops of that type.</p><div id="c6w"></div></div>
+    <div class="card"><h3>Contraband found, by suspected crime</h3><p class="sub">Percent of stops of that type.</p><div id="c6c"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Weapon found, by circumstance cited</h3><p class="sub">Percent of stops where the box was ticked.</p><div id="c6a"></div></div>
+    <div class="card"><h3>Does frisking more mean finding more?</h3><p class="sub">Frisk rate and share of frisks that found a weapon.</p><div class="tw" id="t6"></div>
+      <p class="note">Black and Hispanic people were frisked at nearly twice the White rate, yet the share of frisks that found a weapon is about the same (19–22%).</p></div>
+  </div>
+</section>
+
+<section class="q" id="s7">
+  <div class="num">Question 7</div><h2>Repeat encounters</h2>
+  <p class="ask">How many individuals were stopped and frisked multiple times in 2022? Are there patterns in the demographics or outcomes?</p>
+  <div class="caveat"><b>This question can't be answered with this file.</b>
+    Each of the 15,102 rows is one stop with a unique <code>STOP_ID</code>. The public file has no name, ID, date of birth or any other identifier for the person, so there is no way to tell whether two rows are the same individual. Guessing by matching on age, sex, race and location would produce false matches, so no “repeat” count is reported here.</div>
+  <div class="answer">
+    <p>What the data <i>can</i> say about multiple people in the same stop: in <b>4,630 stops (30.7%)</b> the officer recorded that <b>other people were also stopped</b> in the same encounter. That is a different thing from a person being stopped repeatedly, but it shows that the 15,102 stops involve more than 15,102 people.</p>
+    <p>To study repeat encounters you would need person-level linked data (for example through a records request or a research data agreement) and could then compare demographics and outcomes between people stopped once and people stopped more than once.</p>
+  </div>
+</section>
+
+<section class="q" id="s8">
+  <div class="num">Question 8</div><h2>Age and stop frequency</h2>
+  <p class="ask">Is there a relationship between age and the likelihood of being stopped? How do the reasons differ across age groups?</p>
+  <div class="answer">
+    <ul>
+      <li>Stops skew <b>young</b>: median age 26 (mean 29.3). <b>13.0% were under 18 and 38.1% under 25</b>. The single most common ages were 20 (821), 30 (711), 25 (702) and 18 (693). Age was missing for 1,723 stops (11.4%), and percentages here use the stops with an age.</li>
+      <li>The file has no age-group population counts, so a true per-capita “likelihood” by age can't be computed here. The counts do show that stops are concentrated among teens and people in their 20s (about half of stops with a known age are of people under 28).</li>
+      <li><b>Reasons change with age:</b> CPW is the cited reason in 61% of stops of 18–20-year-olds but only 20% for people 50+. Robbery falls from 21% (≤15) to 7–8% (40+), whereas petit larceny rises from 2% (18–20) to 22% (50+) and burglary from 2–4% (under 21) to 13%.</li>
+      <li>Outcomes also change: stops of 16–24-year-olds found a weapon about 22% of the time vs 10% for 50+, while arrests rise with age (30% at 18–20 to 44% at 50+).</li>
+    </ul>
+  </div>
+  <div class="card"><h3>Stops by age</h3><p class="sub">Number of stops by reported age (ages 12–65 shown). The spikes at ages 20, 25, 30, 40 and 50 suggest officers often round estimated ages.</p><div id="c8age"></div></div>
+  <div class="card"><h3>Reason for stop, by age group</h3>
+    <div class="legend" id="c8leg"></div><div id="c8reason"></div></div>
+  <div class="card"><h3>Outcomes by age group</h3><div class="tw" id="t8"></div></div>
+</section>
+
+<section class="q" id="s9">
+  <div class="num">Question 9</div><h2>Officer identification</h2>
+  <p class="ask">Which officers have conducted the most stop-and-frisk encounters? Are there variations in outcomes based on the officers involved?</p>
+  <div class="caveat"><b>Individual officers are not identifiable in this file.</b>
+    The public data includes the issuing officer's <i>rank</i> and <i>command code</i> (the precinct or unit they work for) but no name, tax ID or badge number. So the analysis below is at the command level, not the individual-officer level.</div>
+  <div class="answer">
+    <ul>
+      <li>There are 199 different commands. <b>Command 46 issued the most stops (1,234, 8.2%)</b>, followed by command 75 (406), 40 (363), 52 (360) and 44 (296). The top 10 commands account for 26.2% of all stops. 77% of stops were issued by the command that covers the precinct where the stop happened.</li>
+      <li><b>Outcomes vary enormously by command.</b> Among the 63 commands with at least 100 stops, the arrest rate ranges from <b>11.3% to 67.6%</b>, the weapon-found rate from <b>3.7% to 38.4%</b>, and the share of stops ending with no arrest or summons from <b>31.5% to 86.1%</b>. The busiest command (46) also had one of the lowest arrest rates (11.3%) with 86.1% of stops ending in no arrest or summons.</li>
+      <li>By rank, 12,383 stops (82%) were issued by officers with the rank code POM and 1,615 (10.7%) by POF (the NYPD's legacy male/female police-officer codes). Arrest rates are similar across ranks (about 28–35%), while weapon-found rates are higher for sergeants (20.5%) and detectives (DTS 19.7%) than for POF (12.9%), though these groups are small.</li>
+    </ul>
+  </div>
+  <div class="card"><h3>Ten commands with the most stops</h3><div class="tw" id="t9"></div></div>
+  <div class="card"><h3>Outcomes by issuing officer's rank</h3><p class="sub">Ranks with at least 100 stops. POM / POF = police officer (legacy male / female codes), SGT = sergeant, LT = lieutenant, DTS / DT3 = detective grades.</p><div class="tw" id="t9r"></div></div>
+</section>
+
+<section class="q" id="s10">
+  <div class="num">Question 10</div><h2>Comparative analysis</h2>
+  <p class="ask">How does 2022 compare to previous years in overall numbers and demographic distribution? Have practices or outcomes changed over time?</p>
+  <div class="answer">
+    <ul>
+      <li><b>Compared with the 2011 peak (685,724 stops), 2022's 15,102 stops are just 2.2%.</b> It's about 8% of 2013's volume (191,851), the year of the federal court ruling that the NYPD's practices were unconstitutional.</li>
+      <li>But <b>2022 was a sharp rebound from recent lows</b>: +69% over 2021 (8,947) and the highest count since 2015 (22,565). The upward trend continued afterwards: 16,971 stops in 2023 and 25,386 in 2024.</li>
+      <li><b>The racial makeup has barely changed.</b> Black people were between 48% and 60% of all stops in every year since 2003 and have been 56–60% since 2017 (58.7% in 2022). The Latinx share has stayed near 28–33% (33% in 2011, 29.6% in 2022), and the White share has fallen from about 9–11% to 7.1% in 2022 and 5–6% in 2023–24.</li>
+      <li><b>Outcomes:</b> the share of stops with no arrest or summons rose from 60.6% in 2021 to 64.6% in 2022, and for weapons-related stops from 71.3% to 75.8% (per the Data Collaborative for Justice analysis of NYPD data). So the NYPD's yield, in terms of arrests, was lower in 2022 than in 2021.</li>
+    </ul>
+  </div>
+  <div class="card"><h3>Number of stops per year, 2003–2024</h3><p class="sub">Source: NYCLU compilation of NYPD data; 2022 matches this analysis (15,102).</p><div id="c10tot"></div></div>
+  <div class="grid2">
+    <div class="card"><h3>Zoom: 2013–2024</h3><div id="c10zoom"></div></div>
+    <div class="card"><h3>Racial composition of stops, 2003–2024</h3><p class="sub">Share of all stops (%).</p><div class="legend"><span><i style="background:var(--c1)"></i>Black</span><span><i style="background:var(--c2)"></i>Latinx</span><span><i style="background:var(--c3)"></i>White</span></div><div id="c10race"></div></div>
+  </div>
+  <div class="card"><h3>Selected years</h3><div class="tw" id="t10"></div>
+    <p class="note">Earlier-year totals and race shares come from the NYCLU's compiled stop-and-frisk data (race shares in this table are computed from the published counts as a share of all stops, so they can differ by a few points from NYCLU's rounded percentages, which are based on stops with a known race). Only 2021 vs 2022 outcome figures were available from published analyses; only this file's 2022 data was analyzed at the record level.</p></div>
+</section>
+
+</main>
+
+<footer><div class="wrap">
+  <h3>Data &amp; method</h3>
+  <p>Data: NYPD Stop, Question and Frisk 2022 file (15,102 records, one per stop). All 2022 figures were computed directly from this file. Percentages are of all 15,102 stops unless noted. “Hispanic” = White Hispanic + Black Hispanic. “No arrest or summons” = neither flag was marked. “Weapon found” and “contraband found” use the file's <code>WEAPON_FOUND_FLAG</code> and <code>OTHER_CONTRABAND_FLAG</code>.</p>
+  <h3>Limitations</h3>
+  <ul>
+    <li>The file counts <b>stops</b>, not unique people, and has no individual or officer identifiers (questions 7 and 9).</li>
+    <li>Race, sex and age are recorded by the officer; 192 stops have no race, 134 no sex and 1,723 no age.</li>
+    <li>Differences between groups are descriptive. They don't by themselves show the cause of a disparity (for example, differences in where police are deployed, or in who is out in public at night).</li>
+    <li>Population-based rates use 2020 Census counts of residents, not the people actually present in an area.</li>
+  </ul>
+  <h3>Sources</h3>
+  <ul>
+    <li><a href="https://www.nyc.gov/site/nypd/stats/reports-analysis/stopfrisk.page">NYPD: Stop, Question and Frisk data</a></li>
+    <li><a href="https://www.nyclu.org/data/stop-and-frisk-data">NYCLU: Stop-and-Frisk Data, 2002–2024</a> (yearly totals and race breakdowns)</li>
+    <li><a href="https://www.nyclu.org/data/closer-look-stop-and-frisk-nyc">NYCLU: A closer look at stop and frisk in NYC</a></li>
+    <li><a href="https://www.nyc.gov/assets/planning/download/pdf/planning-level/nyc-population/census2020/dcp_2020-census-briefing-booklet-1.pdf">NYC Department of City Planning: 2020 Census briefing booklet</a> (population by race and borough)</li>
+    <li><a href="https://www.davisvanguard.org/2023/04/police-stops-significantly-up-highlights-from-2022-nyc-stop-question-frisk-data/">Data Collaborative for Justice via Davis Vanguard: Highlights from 2022 NYC Stop, Question &amp; Frisk Data</a></li>
+  </ul>
+</div></footer>
+<button class="theme" id="theme" aria-label="Toggle dark mode">◐ Theme</button>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const D={"N":15102,"overall":{"n":15102,"arrest":33.0,"summons":2.8,"none":64.6,"frisk":60.0,"search":42.2,"weapon":16.0,"contra":5.8,"any":20.0},"race":[{"k":"American Indian/Alaska Native","n":25,"arrest":48.0,"summons":0.0,"none":52.0,"frisk":24.0,"search":52.0,"weapon":4.0,"contra":0.0,"any":4.0},{"k":"Asian/Pacific Islander","n":320,"arrest":35.3,"summons":2.2,"none":62.5,"frisk":46.6,"search":41.9,"weapon":13.4,"contra":5.6,"any":17.8},{"k":"Black","n":8863,"arrest":32.9,"summons":3.0,"none":64.4,"frisk":63.5,"search":41.9,"weapon":16.8,"contra":5.5,"any":20.6},{"k":"Black Hispanic","n":1441,"arrest":31.3,"summons":2.9,"none":66.2,"frisk":63.5,"search":41.6,"weapon":15.9,"contra":5.6,"any":19.4},{"k":"Middle Eastern/SW Asian","n":148,"arrest":25.7,"summons":0.7,"none":73.6,"frisk":49.3,"search":31.8,"weapon":10.1,"contra":2.0,"any":11.5},{"k":"Unknown","n":192,"arrest":23.4,"summons":3.1,"none":74.0,"frisk":75.0,"search":32.3,"weapon":18.8,"contra":3.1,"any":20.8},{"k":"White","n":1077,"arrest":37.7,"summons":1.4,"none":61.0,"frisk":33.2,"search":44.1,"weapon":9.4,"contra":6.4,"any":14.7},{"k":"White Hispanic","n":3036,"arrest":33.0,"summons":2.7,"none":64.7,"frisk":59.2,"search":43.8,"weapon":16.5,"contra":6.9,"any":21.2}],"rg":[{"k":"American Indian/Alaska Native","n":25,"arrest":48.0,"summons":0.0,"none":52.0,"frisk":24.0,"search":52.0,"weapon":4.0,"contra":0.0,"any":4.0},{"k":"Asian/Pacific Islander","n":320,"arrest":35.3,"summons":2.2,"none":62.5,"frisk":46.6,"search":41.9,"weapon":13.4,"contra":5.6,"any":17.8},{"k":"Black","n":8863,"arrest":32.9,"summons":3.0,"none":64.4,"frisk":63.5,"search":41.9,"weapon":16.8,"contra":5.5,"any":20.6},{"k":"Hispanic","n":4477,"arrest":32.5,"summons":2.8,"none":65.2,"frisk":60.6,"search":43.1,"weapon":16.3,"contra":6.4,"any":20.7},{"k":"Middle Eastern/SW Asian","n":148,"arrest":25.7,"summons":0.7,"none":73.6,"frisk":49.3,"search":31.8,"weapon":10.1,"contra":2.0,"any":11.5},{"k":"Unknown","n":192,"arrest":23.4,"summons":3.1,"none":74.0,"frisk":75.0,"search":32.3,"weapon":18.8,"contra":3.1,"any":20.8},{"k":"White","n":1077,"arrest":37.7,"summons":1.4,"none":61.0,"frisk":33.2,"search":44.1,"weapon":9.4,"contra":6.4,"any":14.7}],"sex":[{"k":"Female","n":1139,"arrest":36.4,"summons":1.7,"none":62.2,"frisk":35.5,"search":39.2,"weapon":8.2,"contra":4.6,"any":12.1},{"k":"Male","n":13829,"arrest":32.9,"summons":2.9,"none":64.6,"frisk":61.9,"search":42.6,"weapon":16.6,"contra":5.9,"any":20.7},{"k":"Unknown","n":134,"arrest":17.2,"summons":1.5,"none":81.3,"frisk":76.1,"search":29.9,"weapon":14.9,"contra":3.7,"any":17.9}],"racesex":{"American Indian/Alaska Native":{"Female":4,"Male":21,"Unknown":0},"Asian/Pacific Islander":{"Female":22,"Male":298,"Unknown":0},"Black":{"Female":616,"Male":8225,"Unknown":22},"Hispanic":{"Female":342,"Male":4124,"Unknown":11},"Middle Eastern/SW Asian":{"Female":2,"Male":145,"Unknown":1},"Unknown":{"Female":8,"Male":87,"Unknown":97},"White":{"Female":145,"Male":929,"Unknown":3}},"month":[1162,1136,1437,1460,1471,1329,1186,1232,1272,1373,1203,841],"dow":[1561,2153,2537,2308,2262,2416,1865],"days_in_dow":[52,52,52,52,52,53,52],"hour":[1149,888,593,475,335,223,132,136,312,296,298,365,390,506,501,523,763,874,891,1027,1048,1138,1207,1032],"heat":[[90,63,45,47,36,30,18,17,50,43,39,49,56,54,67,58,89,126,94,105,117,90,109,69],[69,77,56,41,31,17,19,25,32,44,42,55,62,89,87,90,121,131,144,156,186,188,211,180],[213,122,68,56,47,36,16,22,51,36,48,60,73,82,94,112,146,139,153,170,172,248,195,178],[195,146,78,69,42,24,24,12,40,48,57,60,70,76,57,95,153,145,154,159,155,129,191,129],[169,136,74,61,48,30,9,19,36,52,42,60,55,74,77,57,103,112,120,157,165,195,216,195],[232,192,156,104,73,44,16,28,55,39,36,39,45,72,65,55,82,109,111,163,151,170,186,193],[181,152,116,97,58,42,30,13,48,34,34,42,29,59,54,56,69,112,115,117,102,118,99,88]],"crime":[{"k":"ASSAULT","n":1269,"arrest":40.4,"summons":1.4,"none":58.3,"frisk":39.0,"search":40.8,"weapon":8.7,"contra":2.1,"any":10.5},{"k":"BURGLARY","n":1077,"arrest":35.2,"summons":1.5,"none":63.4,"frisk":29.8,"search":36.4,"weapon":4.5,"contra":8.4,"any":11.6},{"k":"CPW","n":6908,"arrest":20.7,"summons":3.9,"none":75.8,"frisk":87.4,"search":39.4,"weapon":24.4,"contra":4.9,"any":26.8},{"k":"CRIMINAL MISCHIEF","n":238,"arrest":45.4,"summons":1.7,"none":53.4,"frisk":24.4,"search":38.2,"weapon":6.3,"contra":2.5,"any":8.4},{"k":"CRIMINAL TRESPASS","n":203,"arrest":37.9,"summons":7.9,"none":55.2,"frisk":14.3,"search":35.0,"weapon":4.4,"contra":7.4,"any":10.3},{"k":"GRAND LARCENY","n":439,"arrest":50.6,"summons":0.9,"none":49.2,"frisk":19.1,"search":47.8,"weapon":5.9,"contra":7.3,"any":12.3},{"k":"GRAND LARCENY AUTO","n":434,"arrest":29.5,"summons":3.9,"none":67.7,"frisk":39.9,"search":34.1,"weapon":6.0,"contra":2.8,"any":8.5},{"k":"MENACING","n":414,"arrest":41.8,"summons":2.7,"none":56.0,"frisk":69.6,"search":52.4,"weapon":25.4,"contra":2.9,"any":26.3},{"k":"OTHER","n":557,"arrest":32.1,"summons":6.1,"none":62.3,"frisk":46.5,"search":38.8,"weapon":7.4,"contra":5.9,"any":12.0},{"k":"PETIT LARCENY","n":1336,"arrest":61.4,"summons":0.6,"none":38.1,"frisk":19.2,"search":59.4,"weapon":3.9,"contra":11.8,"any":14.9},{"k":"RECKLESS ENDANGERMENT","n":168,"arrest":19.6,"summons":3.6,"none":77.4,"frisk":66.7,"search":32.7,"weapon":12.5,"contra":4.2,"any":14.3},{"k":"ROBBERY","n":1544,"arrest":46.4,"summons":0.8,"none":52.9,"frisk":50.8,"search":46.8,"weapon":15.6,"contra":5.0,"any":18.8}],"init":[{"k":"Based on C/W on Scene","n":1973,"arrest":36.9,"summons":2.1,"none":61.2,"frisk":43.8,"search":43.1,"weapon":9.8,"contra":5.1,"any":13.7},{"k":"Based on Radio Run","n":7783,"arrest":38.9,"summons":1.9,"none":59.5,"frisk":51.3,"search":44.3,"weapon":11.4,"contra":4.8,"any":15.1},{"k":"Based on Self Initiated","n":5346,"arrest":23.0,"summons":4.4,"none":73.2,"frisk":78.7,"search":38.8,"weapon":24.9,"contra":7.5,"any":29.4}],"actions":[{"k":"SUSPECTS_ACTIONS_DECRIPTION_FLAG","n":7770,"pct":100.0,"weapon":11.6,"arrest":43.2},{"k":"SUSPECTS_ACTIONS_PROXIMITY_TO_SCENE_FLAG","n":6390,"pct":100.0,"weapon":11.9,"arrest":41.2},{"k":"SUSPECTS_ACTIONS_CONCEALED_POSSESSION_WEAPON_FLAG","n":5056,"pct":100.0,"weapon":30.8,"arrest":23.9},{"k":"BACKROUND_CIRCUMSTANCES_VIOLENT_CRIME_FLAG","n":3509,"pct":100.0,"weapon":18.6,"arrest":37.3},{"k":"SUSPECTS_ACTIONS_OTHER_FLAG","n":3133,"pct":100.0,"weapon":10.6,"arrest":25.2},{"k":"BACKROUND_CIRCUMSTANCES_SUSPECT_KNOWN_TO_CARRY_WEAPON_FLAG","n":656,"pct":100.0,"weapon":22.1,"arrest":28.8},{"k":"SUSPECTS_ACTIONS_CASING_FLAG","n":470,"pct":100.0,"weapon":18.5,"arrest":28.1},{"k":"SUSPECTS_ACTIONS_LOOKOUT_FLAG","n":157,"pct":100.0,"weapon":15.3,"arrest":28.0},{"k":"SUSPECTS_ACTIONS_DRUG_TRANSACTIONS_FLAG","n":120,"pct":100.0,"weapon":10.8,"arrest":32.5},{"k":"SUSPECTS_ACTIONS_IDENTIFY_CRIME_PATTERN_FLAG","n":100,"pct":100.0,"weapon":12.0,"arrest":34.0}],"boro":[{"k":"BRONX","n":4495,"arrest":24.5,"summons":3.5,"none":72.6,"frisk":78.7,"search":38.4,"weapon":20.6,"contra":5.7,"any":24.0},{"k":"BROOKLYN","n":4465,"arrest":32.3,"summons":2.8,"none":65.1,"frisk":56.8,"search":38.5,"weapon":16.7,"contra":5.3,"any":20.3},{"k":"MANHATTAN","n":3351,"arrest":40.1,"summons":2.2,"none":58.0,"frisk":47.2,"search":45.4,"weapon":11.7,"contra":7.4,"any":17.4},{"k":"QUEENS","n":2351,"arrest":39.2,"summons":2.4,"none":58.6,"frisk":51.5,"search":50.7,"weapon":12.2,"contra":5.1,"any":16.1},{"k":"STATEN ISLAND","n":440,"arrest":40.0,"summons":1.4,"none":58.6,"frisk":45.0,"search":50.0,"weapon":13.2,"contra":4.1,"any":16.4}],"prec_top":[{"k":46,"boro":"BRONX","pctBlack":56.1,"pctHisp":38.5,"pctWhite":0.9,"n":1143,"arrest":12.5,"summons":2.9,"none":84.8,"frisk":90.6,"search":37.0,"weapon":19.5,"contra":3.8,"any":21.9},{"k":75,"boro":"BROOKLYN","pctBlack":80.9,"pctHisp":16.3,"pctWhite":0.8,"n":502,"arrest":21.5,"summons":3.2,"none":75.7,"frisk":72.5,"search":38.2,"weapon":20.3,"contra":4.0,"any":22.7},{"k":48,"boro":"BRONX","pctBlack":59.0,"pctHisp":35.5,"pctWhite":1.1,"n":471,"arrest":22.7,"summons":2.3,"none":75.6,"frisk":83.7,"search":36.7,"weapon":26.1,"contra":6.6,"any":29.1},{"k":40,"boro":"BRONX","pctBlack":52.6,"pctHisp":44.9,"pctWhite":1.4,"n":437,"arrest":26.1,"summons":1.8,"none":72.3,"frisk":78.3,"search":34.8,"weapon":19.5,"contra":7.8,"any":24.9},{"k":43,"boro":"BRONX","pctBlack":53.2,"pctHisp":43.3,"pctWhite":0.5,"n":436,"arrest":28.9,"summons":5.0,"none":67.2,"frisk":77.3,"search":37.6,"weapon":19.3,"contra":6.7,"any":22.7},{"k":73,"boro":"BROOKLYN","pctBlack":86.6,"pctHisp":11.9,"pctWhite":0.5,"n":396,"arrest":26.8,"summons":4.5,"none":68.9,"frisk":76.0,"search":35.1,"weapon":26.5,"contra":4.8,"any":29.8},{"k":44,"boro":"BRONX","pctBlack":53.1,"pctHisp":43.5,"pctWhite":1.3,"n":377,"arrest":25.7,"summons":3.2,"none":71.9,"frisk":73.7,"search":32.1,"weapon":24.4,"contra":6.6,"any":29.2},{"k":52,"boro":"BRONX","pctBlack":40.5,"pctHisp":53.9,"pctWhite":1.9,"n":373,"arrest":20.6,"summons":4.6,"none":75.3,"frisk":82.3,"search":42.6,"weapon":21.2,"contra":5.4,"any":23.6},{"k":14,"boro":"MANHATTAN","pctBlack":60.7,"pctHisp":25.2,"pctWhite":10.5,"n":333,"arrest":39.6,"summons":1.2,"none":59.5,"frisk":37.5,"search":45.6,"weapon":11.4,"contra":8.4,"any":16.5},{"k":42,"boro":"BRONX","pctBlack":63.4,"pctHisp":33.8,"pctWhite":1.2,"n":320,"arrest":32.8,"summons":3.4,"none":64.1,"frisk":75.3,"search":45.0,"weapon":23.8,"contra":5.6,"any":26.6},{"k":67,"boro":"BROOKLYN","pctBlack":88.3,"pctHisp":6.7,"pctWhite":2.9,"n":315,"arrest":32.7,"summons":2.5,"none":64.8,"frisk":64.1,"search":42.9,"weapon":26.0,"contra":4.1,"any":27.0},{"k":79,"boro":"BROOKLYN","pctBlack":75.0,"pctHisp":17.0,"pctWhite":5.1,"n":276,"arrest":37.0,"summons":3.6,"none":59.4,"frisk":50.7,"search":33.3,"weapon":13.4,"contra":6.5,"any":17.8},{"k":47,"boro":"BRONX","pctBlack":75.2,"pctHisp":19.0,"pctWhite":1.6,"n":258,"arrest":36.8,"summons":9.3,"none":57.8,"frisk":73.3,"search":49.6,"weapon":27.9,"contra":4.7,"any":30.6},{"k":81,"boro":"BROOKLYN","pctBlack":90.6,"pctHisp":8.2,"pctWhite":0.0,"n":256,"arrest":27.7,"summons":6.6,"none":65.6,"frisk":78.1,"search":34.4,"weapon":24.6,"contra":5.1,"any":28.1},{"k":28,"boro":"MANHATTAN","pctBlack":82.7,"pctHisp":11.7,"pctWhite":4.4,"n":248,"arrest":30.2,"summons":5.6,"none":64.5,"frisk":53.6,"search":39.9,"weapon":11.3,"contra":12.5,"any":22.6}],"hit":{"frisked_n":9066,"frisked_wf":21.0,"searched_n":6376,"searched_wf":30.6,"fs_n":11315,"fs_any":25.4,"wf_n":2411,"cb_n":875,"any_n":3020,"firearm":1187,"knife":1083,"otherw":265,"neither_fs":11315},"hit_race":[{"k":"Asian/Pacific Islander","n":320,"frisk":46.6,"wf_all":13.4,"wf_frisked":24.2,"any_fs":27.6},{"k":"Black","n":8863,"frisk":63.5,"wf_all":16.8,"wf_frisked":20.9,"any_fs":25.1},{"k":"Hispanic","n":4477,"frisk":60.6,"wf_all":16.3,"wf_frisked":21.6,"any_fs":26.5},{"k":"Middle Eastern/SW Asian","n":148,"frisk":49.3,"wf_all":10.1,"wf_frisked":12.3,"any_fs":17.0},{"k":"Unknown","n":192,"frisk":75.0,"wf_all":18.8,"wf_frisked":19.4,"any_fs":23.3},{"k":"White","n":1077,"frisk":33.2,"wf_all":9.4,"wf_frisked":19.0,"any_fs":24.1}],"age_hist":{"10":5,"11":10,"12":34,"13":105,"14":263,"15":423,"16":555,"17":572,"18":693,"19":550,"20":821,"21":486,"22":497,"23":396,"24":345,"25":702,"26":317,"27":312,"28":356,"29":298,"30":711,"31":296,"32":311,"33":242,"34":266,"35":358,"36":213,"37":194,"38":204,"39":178,"40":359,"41":144,"42":163,"43":141,"44":128,"45":182,"46":110,"47":94,"48":76,"49":89,"50":174,"51":84,"52":83,"53":86,"54":83,"55":96,"56":68,"57":78,"58":59,"59":52,"60":81,"61":37,"62":39,"63":32,"64":22,"65":28,"66":9,"67":17,"68":9,"69":5,"70":8,"71":6,"72":2,"73":4,"74":8,"75":3,"76":1,"77":1,"78":2,"79":3},"age_missing":1723,"ag":[{"k":"\u226415","n":840,"arrest":35.0,"summons":0.6,"none":64.4,"frisk":57.1,"search":43.8,"weapon":16.5,"contra":2.0,"any":17.6},{"k":"16\u201317","n":1127,"arrest":32.7,"summons":4.4,"none":63.9,"frisk":67.4,"search":44.5,"weapon":22.4,"contra":3.5,"any":24.4},{"k":"18\u201320","n":2064,"arrest":30.2,"summons":4.8,"none":65.5,"frisk":73.9,"search":41.9,"weapon":22.1,"contra":3.8,"any":23.9},{"k":"21\u201324","n":1724,"arrest":32.4,"summons":3.6,"none":64.3,"frisk":69.9,"search":42.5,"weapon":22.3,"contra":6.1,"any":25.8},{"k":"25\u201329","n":1985,"arrest":32.1,"summons":2.9,"none":65.4,"frisk":65.1,"search":42.2,"weapon":16.3,"contra":5.9,"any":19.9},{"k":"30\u201339","n":2973,"arrest":36.7,"summons":2.3,"none":61.3,"frisk":53.9,"search":44.2,"weapon":12.8,"contra":7.5,"any":18.6},{"k":"40\u201349","n":1486,"arrest":42.3,"summons":2.2,"none":55.6,"frisk":44.8,"search":46.6,"weapon":12.0,"contra":8.2,"any":18.6},{"k":"50+","n":1180,"arrest":43.6,"summons":1.3,"none":55.5,"frisk":38.4,"search":48.0,"weapon":10.3,"contra":9.7,"any":17.9}],"ag_crime":{"\u226415":{"ALL OTHER":15.6,"ASSAULT":13.2,"BURGLARY":3.7,"CPW":42.5,"PETIT LARCENY":4.3,"ROBBERY":20.7},"16\u201317":{"ALL OTHER":15.5,"ASSAULT":7.3,"BURGLARY":2.2,"CPW":53.4,"PETIT LARCENY":2.1,"ROBBERY":19.4},"18\u201320":{"ALL OTHER":15.5,"ASSAULT":5.8,"BURGLARY":3.4,"CPW":61.2,"PETIT LARCENY":1.7,"ROBBERY":12.4},"21\u201324":{"ALL OTHER":16.6,"ASSAULT":7.4,"BURGLARY":4.7,"CPW":57.8,"PETIT LARCENY":3.4,"ROBBERY":10.1},"25\u201329":{"ALL OTHER":20.2,"ASSAULT":9.1,"BURGLARY":5.6,"CPW":51.6,"PETIT LARCENY":6.0,"ROBBERY":7.5},"30\u201339":{"ALL OTHER":22.9,"ASSAULT":8.8,"BURGLARY":9.8,"CPW":37.4,"PETIT LARCENY":12.7,"ROBBERY":8.3},"40\u201349":{"ALL OTHER":23.3,"ASSAULT":9.8,"BURGLARY":14.3,"CPW":25.5,"PETIT LARCENY":20.2,"ROBBERY":6.9},"50+":{"ALL OTHER":27.8,"ASSAULT":8.8,"BURGLARY":13.0,"CPW":20.3,"PETIT LARCENY":22.4,"ROBBERY":7.8}},"cmd_top":[{"k":"46","n":1234,"arrest":11.3,"summons":2.8,"none":86.1,"frisk":91.1,"search":37.4,"weapon":18.6,"contra":3.7,"any":21.0},{"k":"75","n":406,"arrest":20.7,"summons":3.2,"none":76.4,"frisk":74.4,"search":39.7,"weapon":21.4,"contra":3.7,"any":23.6},{"k":"40","n":363,"arrest":25.9,"summons":1.7,"none":73.0,"frisk":79.1,"search":31.1,"weapon":19.3,"contra":9.4,"any":25.9},{"k":"52","n":360,"arrest":21.1,"summons":4.7,"none":74.4,"frisk":85.0,"search":41.9,"weapon":23.6,"contra":4.2,"any":24.7},{"k":"44","n":296,"arrest":27.4,"summons":2.7,"none":70.6,"frisk":72.0,"search":33.8,"weapon":26.7,"contra":6.8,"any":31.4},{"k":"48","n":276,"arrest":23.6,"summons":1.4,"none":75.4,"frisk":76.8,"search":35.9,"weapon":21.7,"contra":6.2,"any":23.2},{"k":"43","n":273,"arrest":33.3,"summons":3.7,"none":63.7,"frisk":75.8,"search":40.3,"weapon":16.5,"contra":6.6,"any":19.8},{"k":"67","n":272,"arrest":31.6,"summons":2.6,"none":65.8,"frisk":63.6,"search":40.8,"weapon":25.7,"contra":4.0,"any":26.5},{"k":"73","n":244,"arrest":24.6,"summons":4.5,"none":71.3,"frisk":78.3,"search":36.1,"weapon":27.0,"contra":5.7,"any":31.1},{"k":"42","n":237,"arrest":32.5,"summons":3.8,"none":64.1,"frisk":78.5,"search":43.9,"weapon":21.5,"contra":7.6,"any":26.6},{"k":"50","n":236,"arrest":31.8,"summons":3.4,"none":66.1,"frisk":56.8,"search":35.6,"weapon":11.4,"contra":8.5,"any":17.8},{"k":"803","n":226,"arrest":26.1,"summons":7.1,"none":66.8,"frisk":74.3,"search":40.7,"weapon":27.0,"contra":7.5,"any":31.9},{"k":"14","n":225,"arrest":41.3,"summons":0.4,"none":58.2,"frisk":37.3,"search":50.2,"weapon":12.0,"contra":11.1,"any":18.7},{"k":"24","n":225,"arrest":45.3,"summons":0.9,"none":54.2,"frisk":39.6,"search":27.6,"weapon":8.4,"contra":4.9,"any":12.4},{"k":"113","n":222,"arrest":28.8,"summons":1.4,"none":69.8,"frisk":74.8,"search":48.2,"weapon":18.9,"contra":5.4,"any":22.5}],"rank":[{"k":"DT3","n":143,"arrest":28.7,"summons":4.2,"none":67.8,"frisk":76.2,"search":42.0,"weapon":23.8,"contra":7.7,"any":27.3},{"k":"DTS","n":330,"arrest":29.7,"summons":2.7,"none":67.9,"frisk":64.8,"search":44.2,"weapon":19.7,"contra":7.6,"any":25.2},{"k":"LT","n":123,"arrest":28.5,"summons":4.1,"none":67.5,"frisk":69.1,"search":45.5,"weapon":12.2,"contra":4.1,"any":16.3},{"k":"POF","n":1615,"arrest":35.4,"summons":3.0,"none":61.8,"frisk":52.4,"search":40.7,"weapon":12.9,"contra":5.9,"any":17.2},{"k":"POM","n":12383,"arrest":32.8,"summons":2.7,"none":64.8,"frisk":60.4,"search":42.3,"weapon":16.1,"contra":5.7,"any":20.0},{"k":"SGT","n":424,"arrest":33.7,"summons":2.6,"none":63.9,"frisk":66.5,"search":43.6,"weapon":20.5,"contra":7.3,"any":26.4}]};
+const N=D.N;
+const $=s=>document.querySelector(s);
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+const p1=v=>v.toFixed(1)+'%';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const find=(arr,k)=>arr.find(x=>x.k===k);
+
+/* ---- external reference data ---- */
+const POP={Black:1776891,Hispanic:2490350,White:2719856,'Asian/Pacific Islander':1373502};
+const POPSHARE={Black:20.2,Hispanic:28.3,White:30.9,'Asian/Pacific Islander':15.6,Other:5.0};
+const BORO_POP={BRONX:1472654,BROOKLYN:2736074,MANHATTAN:1694251,QUEENS:2405464,'STATEN ISLAND':495747};
+const BORO_BH={BRONX:83.3,BROOKLYN:45.6,MANHATTAN:35.6,QUEENS:43.7,'STATEN ISLAND':29.0};
+const BORO_NAME={BRONX:'Bronx',BROOKLYN:'Brooklyn',MANHATTAN:'Manhattan',QUEENS:'Queens','STATEN ISLAND':'Staten Island'};
+const HOOD={46:'University Hts / Morris Hts',75:'East New York',48:'Belmont / E. Tremont',40:'Mott Haven',43:'Soundview',73:'Brownsville',44:'Highbridge / Concourse',52:'Bedford Park / Fordham',14:'Midtown South',42:'Morrisania',67:'East Flatbush',79:'Bedford-Stuyvesant'};
+// NYCLU: year, total, black, latinx, white
+const Y=[[2003,160851,77704,44581,17623],[2004,313523,155033,89937,28913],[2005,398191,196570,115088,40713],[2006,506491,267468,147862,53500],[2007,472096,243766,141868,52887],[2008,540302,275588,168475,57650],[2009,581168,310611,180055,53601],[2010,601285,315083,189326,54810],[2011,685724,350743,223740,61805],[2012,532911,284229,165140,50366],[2013,191851,104958,55191,20877],[2014,45787,24319,12489,5467],[2015,22565,12223,6598,2567],[2016,12404,6498,3626,1270],[2017,11629,6595,3567,977],[2018,11008,6241,3389,1074],[2019,13459,7981,3869,1215],[2020,9544,5367,2879,856],[2021,8947,5404,2457,732],[2022,15102,8863,4477,1077],[2023,16971,9939,5166,942],[2024,25386,14662,7662,1367]];
+
+/* ---- tooltip ---- */
+const tip=$('#tip');
+function showTip(e){const t=e.target.closest('[data-tip]');if(!t){tip.style.opacity=0;return}
+  tip.textContent=t.getAttribute('data-tip');tip.style.opacity=1;
+  const x=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8),y=e.clientY+16;
+  tip.style.left=Math.max(4,x)+'px';tip.style.top=(y+tip.offsetHeight>innerHeight?e.clientY-tip.offsetHeight-10:y)+'px'}
+document.addEventListener('mousemove',showTip);
+document.addEventListener('click',showTip);
+document.addEventListener('scroll',()=>tip.style.opacity=0,{passive:true});
+
+/* ---- chart helpers ---- */
+function hbar(sel,rows,o={}){
+  const f=o.fmt||fmt,max=o.max||Math.max(...rows.map(r=>r.v));
+  $(sel).innerHTML=rows.map(r=>`<div class="hb" data-tip="${esc(r.tip||r.label+': '+f(r.v))}"><div class="hl">${esc(r.label)}${r.sub?`<small>${esc(r.sub)}</small>`:''}</div><div class="ht"><div class="hf" style="width:${Math.max(r.v/max*100,.4)}%;background:var(${r.c||o.c||'--c1'})"></div></div><div class="hv">${f(r.v)}</div></div>`).join('');
+}
+function cols(sel,rows,o={}){
+  const max=o.max||Math.max(...rows.map(r=>r.v)),f=o.fmt||fmt,tight=o.tight?' tight':'';
+  $(sel).innerHTML=`<div class="cols${tight}">${rows.map(r=>`<div class="col" data-tip="${esc(r.tip||r.label+': '+f(r.v))}">${o.values?`<div class="v">${f(r.v)}</div>`:''}<div class="bar" style="height:${r.v/max*(o.values?82:96)}%;background:var(${r.c||o.c||'--c1'})"></div></div>`).join('')}</div><div class="clabels${tight}">${rows.map((r,i)=>`<span>${(!o.every||i%o.every===0)?esc(r.label):''}</span>`).join('')}</div>`;
+}
+function stack(sel,rows){ // rows: {label,sub,parts:[a,s,n]}
+  const cl=['--c1','--c2','--neutral'],nm=['Arrest','Summons','Neither'];
+  $(sel).innerHTML=`<div class="sr"><div></div><div></div><div class="sn head"><span>Arrest</span><span>Summons</span><span>Neither</span></div></div>`+rows.map(r=>`<div class="sr"><div class="sl">${esc(r.label)}<small>${r.sub||''}</small></div><div class="sb">${r.parts.map((v,i)=>`<div data-tip="${esc(r.label)}: ${nm[i]} ${p1(v)}" style="flex:${v};background:var(${cl[i]})"></div>`).join('')}</div><div class="sn">${r.parts.map(v=>`<span>${p1(v)}</span>`).join('')}</div></div>`).join('');
+}
+function table(sel,head,rows){
+  $(sel).innerHTML=`<table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+function line(sel,series,o){ // series:[{name,color,vals}], labels
+  const W=o.w||720,H=o.h||280,L=48,R=12,T=10,B=26,L2=o.labels,n=L2.length;
+  const ymax=o.ymax,x=i=>L+(W-L-R)*i/(n-1),y=v=>T+(H-T-B)*(1-v/ymax);
+  const ticks=o.ticks;let s=`<svg class="line" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||'line chart')}">`;
+  ticks.forEach(t=>{s+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}"/><text x="${L-6}" y="${y(t)+4}" text-anchor="end">${o.yfmt(t)}</text>`});
+  L2.forEach((l,i)=>{if(i%o.every===0||i===n-1)s+=`<text x="${x(i)}" y="${H-6}" text-anchor="middle">${l}</text>`});
+  s+=`<line class="axis" x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}"/>`;
+  series.forEach(se=>{s+=`<polyline fill="none" stroke="var(${se.color})" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round" points="${se.vals.map((v,i)=>x(i)+','+y(v)).join(' ')}"/>`;
+    const i=n-1;s+=`<circle cx="${x(i)}" cy="${y(se.vals[i])}" r="4" fill="var(${se.color})" stroke="var(--surface)" stroke-width="2"/>`});
+  const bw=(W-L-R)/(n-1);
+  L2.forEach((l,i)=>{const t=l+'\n'+series.map(se=>(series.length>1?se.name+': ':'')+o.yfmt(se.vals[i],1)).join('\n');
+    s+=`<rect class="hit" data-tip="${esc(t)}" x="${x(i)-bw/2}" y="${T}" width="${bw}" height="${H-T-B}"/>`});
+  $(sel).innerHTML=s+'</svg>';
+}
+
+/* ---- tiles ---- */
+const O=D.overall;
+$('#tiles').innerHTML=[[fmt(N),'police stops recorded in 2022'],[p1(O.none),'ended with no arrest or summons'],['58.7%','of stops were of Black New Yorkers (20.2% of residents)'],[p1(O.weapon),'of stops found a weapon']].map(t=>`<div class="tile"><b>${t[0]}</b><span>${t[1]}</span></div>`).join('');
+$('#toc').innerHTML=['Demographics','Timing','Reasons','Outcomes','Location','Weapons','Repeats','Age','Officers','Over time'].map((t,i)=>`<a href="#s${i+1}">${i+1}. ${t}</a>`).join('');
+
+/* ---- Q1 ---- */
+const rg=k=>find(D.rg,k);
+const meu=D.rg.filter(r=>['Middle Eastern/SW Asian','American Indian/Alaska Native','Unknown'].includes(r.k)).reduce((a,r)=>a+r.n,0);
+const share=n=>n/N*100;
+(function(){
+  const rows=[['Black',rg('Black').n,POPSHARE.Black],['Hispanic',rg('Hispanic').n,POPSHARE.Hispanic],['White',rg('White').n,POPSHARE.White],['Asian / Pacific Islander',rg('Asian/Pacific Islander').n,POPSHARE['Asian/Pacific Islander']],['Other / unknown',meu,POPSHARE.Other]];
+  $('#c1race').innerHTML=rows.map(r=>`<div class="hb pair" data-tip="${r[0]}: ${p1(share(r[1]))} of stops (${fmt(r[1])}) vs ${r[2].toFixed(1)}% of residents"><div class="hl">${r[0]}</div><div class="pairbars"><div class="ht"><div class="hf" style="width:${share(r[1])/60*100}%;background:var(--c1)"></div></div><div class="ht"><div class="hf" style="width:${r[2]/60*100}%;background:var(--neutral)"></div></div></div><div class="hv2"><span>${p1(share(r[1]))}</span><span style="color:var(--muted)">${r[2].toFixed(1)}%</span></div></div>`).join('');
+  const rate=['Black','Hispanic','White','Asian/Pacific Islander'].map(k=>({label:k==='Asian/Pacific Islander'?'Asian / Pacific Islander':k,v:rg(k).n/POP[k]*1e5,sub:'',tip:`${k}: ${fmt(rg(k).n)} stops, ${fmt(POP[k])} residents`}));
+  hbar('#c1rate',rate,{fmt:v=>fmt(v),c:'--c1'});
+  const sx=['Male','Female','Unknown'].map(k=>find(D.sex,k));
+  hbar('#c1sex',sx.map(s=>({label:s.k,v:s.n/N*100,tip:`${s.k}: ${fmt(s.n)} stops`})),{fmt:p1,c:'--c2',max:100});
+  const order=['Black','Hispanic','White','Asian/Pacific Islander','Middle Eastern/SW Asian','American Indian/Alaska Native','Unknown'];
+  table('#t1',['Race','Male','Female','Unknown sex','Total','% of stops'],order.map(k=>{const r=D.racesex[k];const t=r.Male+r.Female+r.Unknown;return [k==='Asian/Pacific Islander'?'Asian / Pacific Islander':k,fmt(r.Male),fmt(r.Female),fmt(r.Unknown),fmt(t),p1(t/N*100)]}).concat([['<b>Total</b>',fmt(13829),fmt(1139),fmt(134),'<b>'+fmt(N)+'</b>','100%']]));
+})();
+
+/* ---- Q2 ---- */
+(function(){
+  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const full=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  cols('#c2m',D.month.map((v,i)=>({label:M[i],v,tip:full[i]+': '+fmt(v)+' stops',c:i===4||i===11?'--c2':'--c1'})),{values:true});
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],fd=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  hbar('#c2d',D.dow.map((v,i)=>({label:fd[i],v:v/D.days_in_dow[i],tip:`${fd[i]}: ${fmt(v)} stops over ${D.days_in_dow[i]} days`})),{fmt:v=>v.toFixed(1),c:'--c1'});
+  const hl=h=>(h%12||12)+(h<12?'a':'p');
+  cols('#c2h',D.hour.map((v,h)=>({label:hl(h),v,tip:`${hl(h).replace('a',' am').replace('p',' pm')}: ${fmt(v)} stops`})),{tight:true,every:3});
+  const mx=Math.max(...D.heat.flat());
+  let s='<div></div>'+[...Array(24).keys()].map(h=>`<div class="hl2">${h%3===0?hl(h):''}</div>`).join('');
+  D.heat.forEach((row,d)=>{s+=`<div class="rl">${days[d]}</div>`+row.map((v,h)=>`<div class="cell" data-tip="${fd[d]} ${hl(h).replace('a',' am').replace('p',' pm')}: ${v} stops" style="background:color-mix(in srgb,var(--c1) ${Math.round(8+v/mx*92)}%,var(--surface))"></div>`).join('')});
+  $('#c2heat').innerHTML=s;
+})();
+
+/* ---- Q3 ---- */
+const ACT={SUSPECTS_ACTIONS_DECRIPTION_FLAG:'Fits a description',SUSPECTS_ACTIONS_PROXIMITY_TO_SCENE_FLAG:'Near the scene of a crime',SUSPECTS_ACTIONS_CONCEALED_POSSESSION_WEAPON_FLAG:'Actions suggesting concealed weapon',BACKROUND_CIRCUMSTANCES_VIOLENT_CRIME_FLAG:'Violent-crime background',SUSPECTS_ACTIONS_OTHER_FLAG:'Other actions',BACKROUND_CIRCUMSTANCES_SUSPECT_KNOWN_TO_CARRY_WEAPON_FLAG:'Known to carry a weapon',SUSPECTS_ACTIONS_CASING_FLAG:'Casing a victim or location',SUSPECTS_ACTIONS_LOOKOUT_FLAG:'Acting as lookout',SUSPECTS_ACTIONS_DRUG_TRANSACTIONS_FLAG:'Drug transaction',SUSPECTS_ACTIONS_IDENTIFY_CRIME_PATTERN_FLAG:'Fits a crime pattern'};
+const cname=k=>k.toLowerCase().replace(/(^|\s)\w/g,c=>c.toUpperCase()).replace('Cpw','CPW (weapon possession)');
+function outParts(r){return [r.arrest,r.summons,r.none]}
+(function(){
+  const cr=[...D.crime].sort((a,b)=>b.n-a.n);
+  stack('#c3crime',cr.map(r=>({label:cname(r.k),sub:fmt(r.n)+' stops · '+p1(r.n/N*100),parts:outParts(r)})));
+  const nm={'Based on Radio Run':'Radio run (911 / dispatch)','Based on Self Initiated':'Officer self-initiated','Based on C/W on Scene':'Complainant / witness on scene'};
+  stack('#c3init',[...D.init].sort((a,b)=>b.n-a.n).map(r=>({label:nm[r.k],sub:fmt(r.n)+' stops · '+p1(r.n/N*100),parts:outParts(r)})));
+  hbar('#c3act',D.actions.map(a=>({label:ACT[a.k],v:a.n/N*100,tip:`${ACT[a.k]}: ${fmt(a.n)} stops`})).slice(0,8),{fmt:p1,c:'--c1',max:60});
+})();
+
+/* ---- Q4 ---- */
+(function(){
+  const lab=k=>({'Asian/Pacific Islander':'Asian / Pacific Islander','Middle Eastern/SW Asian':'Middle Eastern / SW Asian'}[k]||k);
+  const mk=(r,l)=>({label:l||lab(r.k),sub:fmt(r.n)+' stops',parts:outParts(r)});
+  const race=['Black','Hispanic','White','Asian/Pacific Islander','Middle Eastern/SW Asian'].map(k=>mk(rg(k)));
+  const sex=['Male','Female'].map(k=>mk(find(D.sex,k)));
+  const bo=[...D.boro].sort((a,b)=>b.n-a.n).map(r=>mk(r,BORO_NAME[r.k]));
+  $('#c4out').innerHTML='<h3>Overall</h3><div id="o0"></div><h3 style="margin-top:14px">By race</h3><div id="o1"></div><h3 style="margin-top:14px">By gender</h3><div id="o2"></div><h3 style="margin-top:14px">By borough</h3><div id="o3"></div>';
+  stack('#o0',[{label:'All stops',sub:fmt(N)+' stops',parts:outParts(O)}]);stack('#o1',race);stack('#o2',sex);stack('#o3',bo);
+  const t=[['All stops',O],...['Black','Hispanic','White','Asian/Pacific Islander'].map(k=>[lab(k),rg(k)]),['Male',find(D.sex,'Male')],['Female',find(D.sex,'Female')]];
+  table('#t4',['Group','Stops','Frisked','Searched','Arrested','Summons'],t.map(([l,r])=>[l,fmt(r.n),p1(r.frisk),p1(r.search),p1(r.arrest),p1(r.summons)]));
+})();
+
+/* ---- Q5 ---- */
+(function(){
+  const pr=D.prec_top.slice(0,12);
+  hbar('#c5prec',pr.map(p=>({label:'Pct. '+p.k,sub:HOOD[p.k]||'',v:p.n,tip:`Precinct ${p.k} (${BORO_NAME[p.boro]}): ${fmt(p.n)} stops`,c:p.boro==='BRONX'?'--c2':'--c1'})),{c:'--c1'});
+  $('#c5prec').insertAdjacentHTML('afterbegin','<div class="legend"><span><i style="background:var(--c2)"></i>Bronx</span><span><i style="background:var(--c1)"></i>Other boroughs</span></div>');
+  const bo=D.boro.map(b=>({...b,rate:b.n/BORO_POP[b.k]*1e5,pop:BORO_POP[b.k],bh:BORO_BH[b.k]})).sort((a,b)=>b.rate-a.rate);
+  hbar('#c5rate',bo.map(b=>({label:BORO_NAME[b.k],v:b.rate,tip:`${BORO_NAME[b.k]}: ${fmt(b.n)} stops, ${fmt(b.pop)} residents`})),{c:'--c1'});
+  table('#t5b',['Borough','Stops','Residents (2020)','Stops / 100k','% Black + Hispanic residents','Arrest %','Weapon found %'],bo.map(b=>[BORO_NAME[b.k],fmt(b.n),fmt(b.pop),fmt(b.rate),b.bh.toFixed(1)+'%',p1(b.arrest),p1(b.weapon)]));
+  table('#t5p',['Precinct','Borough','Stops','Black','Hispanic','White','Arrest %'],pr.map(p=>[`${p.k} <span style="color:var(--muted)">${HOOD[p.k]||''}</span>`,BORO_NAME[p.boro],fmt(p.n),p1(p.pctBlack),p1(p.pctHisp),p1(p.pctWhite),p1(p.arrest)]));
+})();
+
+/* ---- Q6 ---- */
+(function(){
+  const H=D.hit;
+  $('#w1').textContent=fmt(H.wf_n)+' · '+p1(O.weapon);$('#w2').textContent=fmt(H.cb_n)+' · '+p1(O.contra);
+  $('#w3').textContent=p1(H.firearm/N*100);$('#w4').textContent=p1(H.knife/N*100);
+  const cr=[...D.crime].sort((a,b)=>b.weapon-a.weapon);
+  hbar('#c6w',cr.map(r=>({label:cname(r.k),v:r.weapon,tip:`${cname(r.k)}: weapon found in ${p1(r.weapon)} of ${fmt(r.n)} stops`})),{fmt:p1,c:'--c1',max:30});
+  const cc=[...D.crime].sort((a,b)=>b.contra-a.contra);
+  hbar('#c6c',cc.map(r=>({label:cname(r.k),v:r.contra,tip:`${cname(r.k)}: contraband found in ${p1(r.contra)} of ${fmt(r.n)} stops`})),{fmt:p1,c:'--c2',max:30});
+  hbar('#c6a',D.actions.filter(a=>a.n>=300).map(a=>({label:ACT[a.k],v:a.weapon,tip:`${ACT[a.k]}: ${fmt(a.n)} stops, weapon found in ${p1(a.weapon)}`})).sort((a,b)=>b.v-a.v),{fmt:p1,c:'--c1',max:35});
+  const lab=k=>k==='Asian/Pacific Islander'?'Asian / Pacific Islander':k;
+  table('#t6',['Race','Frisk rate','Weapon found per frisk','Weapon found (all stops)'],D.hit_race.filter(r=>['Black','Hispanic','White','Asian/Pacific Islander'].includes(r.k)).map(r=>[lab(r.k),p1(r.frisk),p1(r.wf_frisked),p1(r.wf_all)]));
+})();
+
+/* ---- Q8 ---- */
+(function(){
+  const rows=[];for(let a=12;a<=65;a++)rows.push({label:String(a),v:D.age_hist[a]||0,tip:`Age ${a}: ${D.age_hist[a]||0} stops`});
+  cols('#c8age',rows,{tight:true,every:4});
+  const keys=['CPW','ROBBERY','ASSAULT','BURGLARY','PETIT LARCENY','ALL OTHER'],cl=['--c1','--c2','--c3','--c4','--c5','--neutral'],ln=['CPW (weapon possession)','Robbery','Assault','Burglary','Petit larceny','All other'];
+  $('#c8leg').innerHTML=ln.map((l,i)=>`<span><i style="background:var(${cl[i]})"></i>${l}</span>`).join('');
+  $('#c8reason').innerHTML=D.ag.map(g=>{const c=D.ag_crime[g.k];return `<div class="sr" style="grid-template-columns:120px 1fr"><div class="sl">${g.k}<small>${fmt(g.n)} stops</small></div><div class="sb" style="height:26px">${keys.map((k,i)=>`<div data-tip="Age ${g.k}: ${ln[i]} ${p1(c[k])}" style="flex:${c[k]};background:var(${cl[i]})"></div>`).join('')}</div></div>`}).join('')+'<p class="note">Segment widths are the share of stops in that age group citing each reason. Hover for exact percentages. CPW share: '+D.ag.map(g=>g.k+' '+D.ag_crime[g.k].CPW.toFixed(0)+'%').join(', ')+'.</p>';
+  table('#t8',['Age group','Stops','% of stops','Arrest %','Summons %','Frisked %','Weapon found %','Contraband %'],D.ag.map(g=>[g.k,fmt(g.n),p1(g.n/(N-D.age_missing)*100),p1(g.arrest),p1(g.summons),p1(g.frisk),p1(g.weapon),p1(g.contra)]));
+})();
+
+/* ---- Q9 ---- */
+(function(){
+  const c=D.cmd_top.slice(0,10);
+  table('#t9',['Command','Stops','% of all stops','Arrest %','Summons %','No arrest / summons %','Frisked %','Weapon found %'],c.map(r=>[r.k,fmt(r.n),p1(r.n/N*100),p1(r.arrest),p1(r.summons),p1(r.none),p1(r.frisk),p1(r.weapon)]));
+  const order=['POM','POF','SGT','DTS','DT3','LT'];
+  table('#t9r',['Rank','Stops','Arrest %','Summons %','Frisked %','Weapon found %'],order.map(k=>find(D.rank,k)).map(r=>[r.k,fmt(r.n),p1(r.arrest),p1(r.summons),p1(r.frisk),p1(r.weapon)]));
+})();
+
+/* ---- Q10 ---- */
+(function(){
+  const yrs=Y.map(r=>String(r[0]));
+  line('#c10tot',[{name:'Stops',color:'--c1',vals:Y.map(r=>r[1])}],{labels:yrs,ymax:700000,ticks:[0,175000,350000,525000,700000],yfmt:(v)=>fmt(v),every:3,aria:'Stops per year 2003 to 2024'});
+  const z=Y.filter(r=>r[0]>=2013);
+  cols('#c10zoom',z.map(r=>({label:String(r[0]).slice(2),v:r[1],tip:r[0]+': '+fmt(r[1])+' stops',c:r[0]===2022?'--c2':'--c1'})),{values:true,fmt:v=>v>=1000?(v/1000).toFixed(v>=100000?0:1)+'k':v,tight:true});
+  line('#c10race',[{name:'Black',color:'--c1',vals:Y.map(r=>r[2]/r[1]*100)},{name:'Latinx',color:'--c2',vals:Y.map(r=>r[3]/r[1]*100)},{name:'White',color:'--c3',vals:Y.map(r=>r[4]/r[1]*100)}],{labels:yrs,ymax:70,ticks:[0,20,40,60],yfmt:(v,d)=>v.toFixed(d||0)+'%',every:5,h:260,w:420,aria:'Race share of stops 2003 to 2024'});
+  const sel=Y.filter(r=>[2003,2011,2013,2019,2020,2021,2022,2023,2024].includes(r[0]));
+  table('#t10',['Year','Total stops','Black','Latinx','White','Black %','Latinx %','White %'],sel.map(r=>[r[0]===2022?'<b>2022</b>':r[0],fmt(r[1]),fmt(r[2]),fmt(r[3]),fmt(r[4]),p1(r[2]/r[1]*100),p1(r[3]/r[1]*100),p1(r[4]/r[1]*100)]));
+})();
+
+/* ---- theme toggle ---- */
+$('#theme').addEventListener('click',()=>{const r=document.documentElement;const dark=getComputedStyle(r).colorScheme==='dark';r.setAttribute('data-theme',dark?'light':'dark')});
+</script>
+</body>
+</html>
